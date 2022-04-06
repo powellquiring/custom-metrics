@@ -163,7 +163,7 @@ EOF
 service dragent restart
 ```
 
-The dragent is configured as a statsd server by default so no additional configuration is required.
+No statds configuration required - the dragent is configured as a statsd server by default.
 
 # Using the Monitoring instance in the cloud
 Open the [Monitoring](https://cloud.ibm.com/observe/monitoring) and click **Open dashboard** on your instance to start exploring the metrics.
@@ -193,7 +193,18 @@ sleep_time = 0.10
 
 Change this from 0.10 to 1.0 and wait for the drop from the le="10.0" bucket change from about 10 to about 1.
 
-You can find more information about PromQL here:
+Try the following PromQL Query:
+
+```
+min(custom_histogram_bucket{le="4.0"}) / avg(custom_histogram_count)
+```
+
+This shows only the bucket 4.0 and divides by the histogram count.  The histogram count is incremented each time an item is put into the buckets.  The number in this case will capture the percent of items that fall into the bucket reguardless of the collection rate.  Toggle the 
+
+Read up on [PromQL Explorer](https://prometheus.io/docs/prometheus/latest/querying/basics/) and IBM Monitoring
+
+
+More on [PromQL Explorer](https://prometheus.io/docs/prometheus/latest/querying/basics/)
 
 ## Alerting
 
@@ -209,18 +220,7 @@ I could be notified when this happens using the **Alert** on the left side.  Cli
 
 ![image](https://user-images.githubusercontent.com/6932057/162047590-400dc72e-5f46-4f0f-857a-ac60f6c7d7a5.png)
 
-
-
-Expressions
-To get trends over time you can use prometheus ratios.  Try the following PromQL Query:
-
-```
-min(custom_histogram_bucket{le="4.0"}) / avg(custom_histogram_count)
-```
-
-This shows only the bucket 4.0 and divides by the histogram count.  The histogram count is incremented each time an item is put into the buckets.  The number in this case will capture the percent of items that fall into the bucket reguardless of the collection rate.
-
-Read up on [PromQL Explorer](https://prometheus.io/docs/prometheus/latest/querying/basics/) and IBM Monitoring
+If you run out of patience waiting for an alert change the query to something that happens more frequently or change the values in the example.py.
 
 # Node exporter example
 
