@@ -216,17 +216,17 @@ sum(increase(custom_histogram_bucket{le="10.0"}[1m])) - sum(increase(custom_hist
 
 ![image](https://user-images.githubusercontent.com/6932057/162046879-312d58f9-b0be-42a3-ac89-27dd3c340067.png)
 
-I could be notified when this happens using the **Alert** on the left side.  Click it and the experience of sending an email alert when the difference above is > 0:
+I could be notified when this happens using the alerts.  Click **Alert** on the left side and configure an email alert when the difference above is > 0:
 
 ![image](https://user-images.githubusercontent.com/6932057/162047590-400dc72e-5f46-4f0f-857a-ac60f6c7d7a5.png)
 
-If you run out of patience waiting for an alert change the query to something that happens more frequently or change the values in the example.py.
+If you run out of patience waiting for an alert, change the query to something that happens more frequently or change the values in the example.py running on the instance.
 
 # Node exporter example
 
 There are prometheus exporters that can collect data from the instance.  The [Node exporter](https://github.com/prometheus/node_exporter) can be used to get some additional data.
 
-ssh to the instance.  Follow the [MONITORING LINUX HOST METRICS WITH THE NODE EXPORTER](https://prometheus.io/docs/guides/node-exporter/) instructions.
+Ssh to the instance.  Follow the [MONITORING LINUX HOST METRICS WITH THE NODE EXPORTER](https://prometheus.io/docs/guides/node-exporter/) instructions.
 
 Recent experience:
 
@@ -239,7 +239,7 @@ cd $ne
 ./node_exporter
 ```
 
-The last few lines output by the node_exporter indicate the port that must be scraped:
+The last few lines output by the node_exporter indicate the port that must be scraped by dragent:
 
 ```
 ...
@@ -263,7 +263,7 @@ scrape_configs:
 EOF
 ```
 
-You will notice in a few minutes that the **promscrape.yaml** file is updated with the new 9100 port.  A few minutes back in the Monitoring intance a query for **process_cpu_seconds_total** for the last 10 secons should return a graph something like this one.
+You will notice in a few seconds that the **promscrape.yaml** file is updated with the addition of 9100 port.  In a few minutes check the Monitoring intance dashboard.  Query for **process_cpu_seconds_total** for the last 10 seconds to observe a graph like this one:
 
 ![image](https://user-images.githubusercontent.com/6932057/162051711-866f0e08-4e8b-4fa8-a831-bf6df854f8ba.png)
 
