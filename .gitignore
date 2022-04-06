@@ -1,0 +1,10 @@
+local.env
+
+# terraform
+*.tfstate*
+*.terraform*
+secrets.json
+
+venv
+template.local.env
+.vscode
