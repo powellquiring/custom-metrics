@@ -11,9 +11,14 @@ Create the following resources in the IBM cloud:
 - [Virtual Server Instance](https://cloud.ibm.com/vpc-ext/compute/vs) and a Floating IP.  This example is based on the ibm-ubuntu-20-04-3-minimal-amd64-2 image.  You can create the VPC resources required using the cloud console or use the terraform configuration in the [terraform/](./terraform/README.md) directory.
 
 ## Install the monitoring agent on the instance
-To install the monitoring agent, dragent, on the instance check out the instructions in the cloud Monitoring instance and follow through on the VPC instance:
+The IBM Cloud Monitoring instance created earlier includes some easy to follow instructions to install a Linux agent:
 
-- Find the instructions provided in the IBM Cloud Console, by selecting your [Monitoring](https://cloud.ibm.com/observe/monitoring) instance, click **Monitoring sources** on the left and click the **Linux** tab.  See [Deploying a monitoring agent](https://test.cloud.ibm.com/docs/monitoring?topic=monitoring-config_agent) for more help.
+- Open the [Monitoring](https://cloud.ibm.com/observe/monitoring) instance
+  - Click your monitoring instance
+  - Click **Monitoring sources** on the left
+  - Click the **Linux** tab
+
+  You can also check out [Deploying a monitoring agent](https://test.cloud.ibm.com/docs/monitoring?topic=monitoring-config_agent)
 - ssh to the instance through the Floating IP and copy/paste the agent installation instructions.
 
 Verify the installation of the agent: dragent:
@@ -182,10 +187,15 @@ Check out the statsd metrics sent by the application through the agent to the mo
 Check out the prometheus metrics hosted by the application and scraped by the agent and sent to the monitoring instance.
 - Click on **Explore** on the left
 - Click **PromQL Query** on the top
-- type: rate(custom_histogram_bucket[$__interval]) 
+- In the **A** query box type: custom_histogram_bucket
 - Click the **5M** interval on the bottom
 
-You should see a graph of each of the histogram buckets created in the application from le="1.0".."10.0".  The counts being accumulated in the buckets is ever increasing.  The rate() function shows the change in the bucket size during the interval so the lines are not rising in general over time.  The number of items placed in any bucket is controlled by both the random value generated and how frequently the call is made.  The frequency is determined by **sleep_time** varable in the example.py:
+
+You should see a graph of each of the histogram buckets created in the application from le="1.0".."10.0".  The count being accumulated in each of the buckets is ever increasing.  
+
+Changee the **A** query to: rate(custom_histogram_bucket[$__interval]) 
+
+The rate() function shows the per second change in the bucket size.  This during the interval so the lines are not rising in general over time.  The number of items placed in any bucket is controlled by both the random value generated and how frequently the call is made.  The frequency is determined by **simultaneouss** varable in the example.py:
 
 ```
 sleep_time = 0.10
@@ -199,12 +209,9 @@ Try the following PromQL Query:
 min(custom_histogram_bucket{le="4.0"}) / avg(custom_histogram_count)
 ```
 
-This shows only the bucket 4.0 and divides by the histogram count.  The histogram count is incremented each time an item is put into the buckets.  The number in this case will capture the percent of items that fall into the bucket reguardless of the collection rate.  Toggle the 
+This shows only the bucket 4.0 and divides by the histogram count.  The histogram count is incremented each time an item is put into the buckets.  This will graph the percent of items that fall into the bucket reguardless of the collection rate.
 
-Read up on [PromQL Explorer](https://prometheus.io/docs/prometheus/latest/querying/basics/) and IBM Monitoring
-
-
-More on [PromQL Explorer](https://prometheus.io/docs/prometheus/latest/querying/basics/)
+A full understanding of [Prometheus Query](https://prometheus.io/docs/prometheus/latest/querying/basics/) is outside the scope of this post.
 
 ## Alerting
 
@@ -228,7 +235,7 @@ There are prometheus exporters that can collect data from the instance.  The [No
 
 Ssh to the instance.  Follow the [MONITORING LINUX HOST METRICS WITH THE NODE EXPORTER](https://prometheus.io/docs/guides/node-exporter/) instructions.
 
-Recent experience:
+Example:
 
 ```
 ver=1.3.1

@@ -10,17 +10,14 @@ buckets = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, prometheus_client.
 h = Histogram('custom_histogram', 'application prometheus example', buckets=buckets)
 statsd = StatsClient()
 
-@ h.time()
-def prometheus_example(i):
+sleep_time = 0.10
+# it is also possible to decorate this function with either statsd or prometheus decorators
+def process_observe():
     r = random.betavariate(2, 5); # random number 0..1 with a distribution similar to processing times
-    time.sleep(r * 10.0)
-    print(f"prometheus_example {i} done")
-
-@statsd.timer("custom_timing")
-def statsd_example(i):
-    r = random.betavariate(2, 5); # random number 0..1 with a distribution similar to processing times
-    time.sleep(r * 1.0)
-    print(f"statsd_example {i} done")
+    # print(r)
+    h.observe(r * 10.0); # scale up to the bucket sizes 1..10
+    statsd.timing('custom_timing', r * 1000.0); #timing wants milliseconds
+    time.sleep(sleep_time); # slow down a little, adjust sleep_time to increase data flow
 
 prometheus_port = 8000
 if __name__ == '__main__':
@@ -28,9 +25,5 @@ if __name__ == '__main__':
     start_http_server(prometheus_port)
 
     # Generate some requests.
-    i = 0
     while True:
-      prometheus_example(i)
-      i += 1
-      statsd_example(i)
-      i += 1
+        process_observe()
