@@ -40,8 +40,8 @@ cd /opt/draios/logs
 less draios.log
 ```
 
-## Add prometheus or statsd stats to your application
-The dragent is a statsd server and can be configured as a prometheus forwarder. Modern programming languages have open source libraries for both statsd client and prometheus exporter. For python:
+## Add Prometheus or StatsD to your application
+The dragent is a [StatsD](https://github.com/statsd/statsd) server and can be configured as a [Prometheus](https://prometheus.io/) scraper/forwarder. Modern programming languages have open source libraries for both statsd client and prometheus client exporter. For python:
 - [python prometheus client](https://pypi.org/project/prometheus-client/)
 - [python statsd client](https://pypi.org/project/statsd/)
 
@@ -66,11 +66,11 @@ pip3 install prometheus-client
 pip3 install statsd
 ```
 
-The example python program uses both prometheus and statsd.  You can copy/paste the lines below to create an example.py program and make it executable:
+There are three application programs: [example.py](./app/example.py), [async.py](./app/async.py) and [raw](./app/raw.py).  Each demonstrate a different way of capturing metrics using both statsd and prometheus.
 
-```
 cd; # go to home directory /root on ubuntu
-cat > example.py <<EOF
+```
+cat > async.py <<EOF
 #!/usr/bin/env python3
 from prometheus_client import start_http_server, Histogram
 import prometheus_client
@@ -229,9 +229,16 @@ I could be notified when this happens using the alerts.  Click **Alert** on the 
 
 If you run out of patience waiting for an alert, change the query to something that happens more frequently or change the values in the example.py running on the instance.
 
-# Node exporter example
+# Additional exporters
 
-There are prometheus exporters that can collect data from the instance.  The [Node exporter](https://github.com/prometheus/node_exporter) can be used to get some additional data.
+There are prometheus exporters that can collect data from the instance. 
+
+![alt](./xdocs/architecture-exporters.png)
+
+
+
+## Node exporter
+The [Node exporter](https://github.com/prometheus/node_exporter) can be used to get some additional data.  It provides NFS statistics for example.
 
 Ssh to the instance.  Follow the [MONITORING LINUX HOST METRICS WITH THE NODE EXPORTER](https://prometheus.io/docs/guides/node-exporter/) instructions.
 
@@ -272,5 +279,6 @@ EOF
 
 You will notice in a few seconds that the **promscrape.yaml** file is updated with the addition of 9100 port.  In a few minutes check the Monitoring intance dashboard.  Query for **process_cpu_seconds_total** for the last 10 seconds to observe a graph like this one:
 
-![image](https://user-images.githubusercontent.com/6932057/162051711-866f0e08-4e8b-4fa8-a831-bf6df854f8ba.png)
+Configure and NFS file share and mount the file share on the instance.  See [planning your file shares](https://cloud.ibm.com/docs/vpc?topic=vpc-file-storage-planning)
+
 

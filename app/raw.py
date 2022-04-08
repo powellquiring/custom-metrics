@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+# example.py - send metrics directly nothing fancy
+
 from prometheus_client import start_http_server, Histogram
 import prometheus_client
 from statsd import StatsClient
