@@ -281,4 +281,51 @@ You will notice in a few seconds that the **promscrape.yaml** file is updated wi
 
 Configure and NFS file share and mount the file share on the instance.  See [planning your file shares](https://cloud.ibm.com/docs/vpc?topic=vpc-file-storage-planning)
 
+On the monitoring instance search for: node_nfs_requests_total:
+
+![image](https://user-images.githubusercontent.com/6932057/162452510-1e67a442-1712-4257-9529-9ebb6373a8d3.png)
+
+
+## StatsD Exporter
+
+The [statsd exporter](https://github.com/prometheus/statsd_exporter) provides a little more information for timings.  Install docker and run the statsd-exporter:
+
+```
+apt update
+apt install docker.io
+docker pull prom/statsd-exporter
+docker run -d -p 9102:9102 -p 9126:9126 -p 9126:9126/udp
+docker run -d -p 9102:9102 -p 9126:9125 -p 9126:9125/udp prom/statsd-exporter
+```
+
+Note that 9125 is that standard port for statsd and that is used within the docker container.  But that is consumed by the dragent so map it to 9126.  The prometheus data is then scraped from port 9102.
+
+Change the following line in the python example:
+
+```
+statsd = StatsClient("localhost", 9126)
+```
+
+And configure dragent to scrape:
+
+```
+cd /opt/draios/etc
+ls
+cat > prometheus.yaml << EOF
+scrape_configs:
+  - job_name: python
+    static_configs:
+      - targets: [127.0.0.1:8000]
+  - job_name: node_exporter
+    static_configs:
+      - targets: [127.0.0.1:9100]
+  - job_name: stats_exporter
+    static_configs:
+      - targets: [127.0.0.1:9102]
+EOF
+ls -lt
+```
+Once the file promscrape.yaml has been updated data will start flowing.  Back in the instance quantile data is now availble:
+
+![image](https://user-images.githubusercontent.com/6932057/162475734-71fce238-cec8-4f46-91dc-7b1175250591.png)
 
