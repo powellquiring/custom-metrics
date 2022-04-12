@@ -19,7 +19,7 @@ The IBM Cloud Monitoring instance created earlier includes some easy to follow i
   - Click the **Linux** tab
 
   You can also check out [Deploying a monitoring agent](https://test.cloud.ibm.com/docs/monitoring?topic=monitoring-config_agent)
-- ssh to the instance through the Floating IP and copy/paste the agent installation instructions.
+- ssh to the instance through the Floating IP and copy/paste the agent installation instructions for private (public will work as well).
 
 Verify the installation of the agent: dragent:
 - Check the content of /opt/draios/etc/dragent.yaml to find the Monitoring collector, customerid (ingestion key), etc.
