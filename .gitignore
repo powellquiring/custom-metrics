@@ -6,5 +6,4 @@ local.env
 secrets.json
 
 venv
-template.local.env
 .vscode
