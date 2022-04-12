@@ -20,13 +20,13 @@ async def prometheus_example(i):
   with h.time():
     r = random.betavariate(2, 5); # random number 0..1 with a distribution similar to processing times
     await asyncio.sleep(r * 10.0)
-    print(f"prometheus_example {i} done")
+    #print(f"prometheus_example {i} done")
 
 async def statsd_example(i):
   with statsd.timer("custom_timing"):
     r = random.betavariate(2, 5); # random number 0..1 with a distribution similar to processing times
     await asyncio.sleep(r * 1.0)
-    print(f"statsd_example {i} done")
+    #print(f"statsd_example {i} done")
 
 #--------------------------------------------------------------------------------------------
 # Code to simulatenously run multiple copies of the two examples above
@@ -37,7 +37,7 @@ async def runner(example, simultaneous):
   l = [asyncio.create_task(example(i)) for i in range(simultaneous)]
   i = simultaneous
   while True:
-    print(f"total:{i}")
+    #print(f"total:{i}")
     done, pending = await asyncio.wait(l, return_when=asyncio.FIRST_COMPLETED)
     l = list(pending) + [asyncio.create_task(example(t)) for t in range(i, i + len(done))]
     i = i + len(done)

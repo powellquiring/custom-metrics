@@ -7,7 +7,7 @@ This example uses the IBM Cloud Monitoring service to display custom metrics cre
 ## Create resources
 
 Create the following resources in the IBM cloud:
-- [Monitoring](https://cloud.ibm.com/observe/monitoring) instance
+- [Monitoring](https://cloud.ibm.com/observe/monitoring) instance.  In the monitoring instance click the **Action** > **Obtain key**
 - [Virtual Server Instance](https://cloud.ibm.com/vpc-ext/compute/vs) and a Floating IP.  This example is based on the ibm-ubuntu-20-04-3-minimal-amd64-2 image.  You can create the VPC resources required using the cloud console or use the terraform configuration in the [terraform/](./terraform/README.md) directory.
 
 ## Install the monitoring agent on the instance
@@ -27,6 +27,10 @@ Verify the installation of the agent: dragent:
 ```
 cd /opt/draios/etc
 cat dragent.yaml
+```
+
+Expected output something like:
+```
 customerid: 12345678-1234-1234-1234-123456789012
 collector: ingest.us-south.monitoring.cloud.ibm.com
 collector_port: 6443
@@ -62,8 +66,7 @@ pip 20.0.2 from /usr/lib/python3/dist-packages/pip (python 3.8)
 
 Install the prometheus and statsd client support:
 ```
-pip3 install prometheus-client
-pip3 install statsd
+pip3 install prometheus-client statsd
 ```
 
 There are three application programs: [example.py](./app/example.py), [async.py](./app/async.py) and [raw](./app/raw.py).  Each demonstrate a different way of capturing metrics using both statsd and prometheus.
@@ -72,42 +75,67 @@ cd; # go to home directory /root on ubuntu
 ```
 cat > async.py <<EOF
 #!/usr/bin/env python3
+
+# async.py - collect metrics from an application built on asyncio
+
+import asyncio
+import queue
+import random
 from prometheus_client import start_http_server, Histogram
 import prometheus_client
 from statsd import StatsClient
-import random
-import time
 
-# a uniform distribution of buckets from 1 to 10
+# number of example_ functions to run simultaneously
+simultaneous = 10
+
 buckets = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, prometheus_client.utils.INF)
 h = Histogram('custom_histogram', 'application prometheus example', buckets=buckets)
 statsd = StatsClient()
 
-sleep_time = 0.10
-# it is also possible to decorate this function with either statsd or prometheus decorators
-def process_observe():
+async def prometheus_example(i):
+  with h.time():
     r = random.betavariate(2, 5); # random number 0..1 with a distribution similar to processing times
-    # print(r)
-    h.observe(r * 10.0); # scale up to the bucket sizes 1..10
-    statsd.timing('custom_timing', r * 1000.0); #timing wants milliseconds
-    time.sleep(sleep_time); # slow down a little, adjust sleep_time to increase data flow
+    await asyncio.sleep(r * 10.0)
+    #print(f"prometheus_example {i} done")
+
+async def statsd_example(i):
+  with statsd.timer("custom_timing"):
+    r = random.betavariate(2, 5); # random number 0..1 with a distribution similar to processing times
+    await asyncio.sleep(r * 1.0)
+    #print(f"statsd_example {i} done")
+
+#--------------------------------------------------------------------------------------------
+# Code to simulatenously run multiple copies of the two examples above
+# 
+
+async def runner(example, simultaneous):
+  """ example - function to run, simultaneous - number of active functions"""
+  l = [asyncio.create_task(example(i)) for i in range(simultaneous)]
+  i = simultaneous
+  while True:
+    #print(f"total:{i}")
+    done, pending = await asyncio.wait(l, return_when=asyncio.FIRST_COMPLETED)
+    l = list(pending) + [asyncio.create_task(example(t)) for t in range(i, i + len(done))]
+    i = i + len(done)
+
+async def main():
+  await asyncio.wait([asyncio.create_task(runner(prometheus_example, simultaneous)), asyncio.create_task(runner(statsd_example, simultaneous))], return_when=asyncio.ALL_COMPLETED)
 
 prometheus_port = 8000
 if __name__ == '__main__':
     print(f"Start up the prometheus collection server.  Have you created the /opt/draios/etc/prometheus.yaml, see README.md, for port {prometheus_port}?")
     start_http_server(prometheus_port)
+    asyncio.run(main())
 
-    # Generate some requests.
-    while True:
-        process_observe()
+
 EOF
-chmod 775 ./example.py
+chmod 775 ./async.py
 ```
 
 Then run the example python program, it should look like this:
 
 ```
-root@custom2:~# ./example.py
+root@custom2:~# ./async.py
 Start up the prometheus collection server.  Have you created the /opt/draios/etc/prometheus.yaml, see README.md, for port 8000?
 ```
 
@@ -158,15 +186,16 @@ Copy and pase the content below to complete these tasks:
 - restart the dragent
 ```
 cd /opt/draios/etc
-ls
+ls -lt
 cat > prometheus.yaml << EOF
 scrape_configs:
   - job_name: python
     static_configs:
       - targets: [127.0.0.1:8000]
 EOF
-service dragent restart
+ls -lt
 ```
+Note that the date on the file `promscrape.yaml` has changed.  That is an indication that the dragent noticed the prometheus.yaml file and incorporated it.  Check the contents of `promscrape.yaml` to verify the additions.
 
 No statds configuration required - the dragent is configured as a statsd server by default.
 
@@ -177,8 +206,9 @@ Open the [Monitoring](https://cloud.ibm.com/observe/monitoring) and click **Open
 Check out the statsd metrics sent by the application through the agent to the monitoring instance.
 
 - Click on **Explore** on the left
+- Click on **10s** at the bottom
 - Verify and select your instance name, mine is **custom2**
-- Search for **custom_timnig** the statsd metric the application is collecting
+- Search for **custom_timing** the statsd metric the application is collecting
 - Change the aggregation values between Average, Minimmum, Maximum to get a feel for the data that is being captured
 
 ![image](https://user-images.githubusercontent.com/6932057/162022164-e9c4e0b5-f09e-410b-91fb-ec5f342689ae.png)
@@ -195,13 +225,15 @@ You should see a graph of each of the histogram buckets created in the applicati
 
 Changee the **A** query to: rate(custom_histogram_bucket[$__interval]) 
 
-The rate() function shows the per second change in the bucket size.  This during the interval so the lines are not rising in general over time.  The number of items placed in any bucket is controlled by both the random value generated and how frequently the call is made.  The frequency is determined by **simultaneouss** varable in the example.py:
+The rate() function shows the per second change in the bucket size.  This during the interval so the lines are not rising in general over time.  The number of items placed in any bucket is controlled by both the random value generated and how frequently the call is made.  The frequency is determined by **simultaneous** varable.  Hit control-c to stop the async.py program and change the value from 10 to 1:
 
 ```
-sleep_time = 0.10
+# number of example_ functions to run simultaneously
+# simultaneous = 10
+simultaneous = 1
 ```
 
-Change this from 0.10 to 1.0 and wait for the drop from the le="10.0" bucket change from about 10 to about 1.
+Start the async.py program again and wait for the drop from the le="8.0" bucket change from about 3.0 to about 0.3
 
 Try the following PromQL Query:
 
@@ -227,7 +259,7 @@ I could be notified when this happens using the alerts.  Click **Alert** on the 
 
 ![image](https://user-images.githubusercontent.com/6932057/162047590-400dc72e-5f46-4f0f-857a-ac60f6c7d7a5.png)
 
-If you run out of patience waiting for an alert, change the query to something that happens more frequently or change the values in the example.py running on the instance.
+If you run out of patience waiting for an alert (it will take a while), change the query to something that happens more frequently (compare le=10 to le=5) or change the values in the async.py running on the instance.
 
 # Additional exporters
 
@@ -265,7 +297,7 @@ Add this port to the dragent configuration:
 
 ```
 cd /opt/draios/etc
-ls
+ls -lt
 cat > prometheus.yaml << EOF
 scrape_configs:
   - job_name: python
@@ -275,10 +307,12 @@ scrape_configs:
     static_configs:
       - targets: [127.0.0.1:9100]
 EOF
+ls -lt
 ```
 
-You will notice in a few seconds that the **promscrape.yaml** file is updated with the addition of 9100 port.  In a few minutes check the Monitoring intance dashboard.  Query for **process_cpu_seconds_total** for the last 10 seconds to observe a graph like this one:
+You will notice in a few seconds that the **promscrape.yaml** file is updated with the addition of 9100 port.  In a few minutes check the Monitoring intance dashboard.  Query for **node_cpu_seconds_total** for the last 10 seconds.
 
+## Node exporter and NFS - optional
 Configure and NFS file share and mount the file share on the instance.  See [planning your file shares](https://cloud.ibm.com/docs/vpc?topic=vpc-file-storage-planning)
 
 On the monitoring instance search for: node_nfs_requests_total:
@@ -294,13 +328,12 @@ The [statsd exporter](https://github.com/prometheus/statsd_exporter) provides a 
 apt update
 apt install docker.io
 docker pull prom/statsd-exporter
-docker run -d -p 9102:9102 -p 9126:9126 -p 9126:9126/udp
 docker run -d -p 9102:9102 -p 9126:9125 -p 9126:9125/udp prom/statsd-exporter
 ```
 
 Note that 9125 is that standard port for statsd and that is used within the docker container.  But that is consumed by the dragent so map it to 9126.  The prometheus data is then scraped from port 9102.
 
-Change the following line in the python example:
+Change the following line in the python example, async.py:
 
 ```
 statsd = StatsClient("localhost", 9126)
@@ -310,7 +343,7 @@ And configure dragent to scrape:
 
 ```
 cd /opt/draios/etc
-ls
+ls -lt
 cat > prometheus.yaml << EOF
 scrape_configs:
   - job_name: python

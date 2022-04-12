@@ -1,5 +1,7 @@
 # Creating a vpc, instance, floating ip
 
+WARNING: this is not a security hardened, ready for production system.  Please use as only as an example starter.
+
 See installation instructions for terraform and the ibmcloud cli in [Getting started with solution tutorials](https://cloud.ibm.com/docs/solution-tutorials?topic=solution-tutorials-tutorials)
 
 ```
